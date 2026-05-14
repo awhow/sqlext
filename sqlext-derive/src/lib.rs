@@ -49,6 +49,26 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
 
     for field in fields.iter() {
         let ident = field.ident.as_ref().unwrap();
+
+        let mut skip = false;
+
+        for attr in &field.attrs {
+            if attr.path().is_ident("sqlext") {
+                attr.parse_nested_meta(|meta| {
+                    if meta.path.is_ident("skip") {
+                        skip = true;
+                    }
+
+                    Ok(())
+                })
+                .unwrap();
+            }
+        }
+
+        if skip {
+            continue;
+        }
+
         let field_name = ident.to_string();
 
         let column_name = column_overrides
