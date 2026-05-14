@@ -66,3 +66,19 @@ let emp = Employee::new()
 emp.insert(pool).await?;
 
 ```
+
+There is some flexibility built in
+
+```rust
+#[derive(FromRow, Debug, Clone, ToRow)]
+#[sqlext(table = "employees")]
+pub struct Employee {
+    pub id: Uuid,
+
+    #[sqlext(column = "employee_name")]
+    pub name: String,
+
+    #[sqlext(skip)]
+    pub nick_name: String,
+}
+```
