@@ -1,6 +1,6 @@
 [package]
 name = "sqlext-derive"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [lib]
@@ -10,4 +10,4 @@ proc-macro = true
 syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
-convert_case = "0.6"
+convert_case = "0.11"
