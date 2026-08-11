@@ -2,11 +2,6 @@
 
 This workspace defines a ToRow trait and a ToRow proc macro. See the example below:
 
-TODO:
-- Rename ToRow to Insert
-- Add InsertSql, to create SQL insert statement
-- Add Delete and DeleteSql
-
 Your code may use the ToRow trait like this:
 
 ```insert.rs

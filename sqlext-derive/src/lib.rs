@@ -35,13 +35,19 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
         _ => panic!("ToRow only supports structs"),
     };
 
-    let mut binds = Vec::new();
     let mut columns = Vec::new();
+    let mut pkeys = Vec::new();
+    let mut non_pkeys = Vec::new();
+
+    let mut binds = Vec::new();
+    let mut pkey_binds = Vec::new();
+    let mut data_binds = Vec::new();
 
     for field in fields.iter() {
         let ident = field.ident.as_ref().unwrap();
 
         let mut skip = false;
+        let mut pkey = false;
         let mut column_name = ident.to_string();
 
         for attr in &field.attrs {
@@ -49,6 +55,11 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
                 attr.parse_nested_meta(|meta| {
                     if meta.path.is_ident("skip") {
                         skip = true;
+                        return Ok(());
+                    }
+
+                    if meta.path.is_ident("pkey") {
+                        pkey = true;
                         return Ok(());
                     }
 
@@ -68,11 +79,23 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
             continue;
         }
 
-        columns.push(column_name);
+        columns.push(column_name.clone());
 
         binds.push(quote! {
             query = query.bind(&self.#ident);
         });
+
+        if pkey {
+            pkeys.push(column_name);
+            pkey_binds.push(quote! {
+                query = query.bind(&self.#ident);
+            });
+        } else {
+            non_pkeys.push(column_name);
+            data_binds.push(quote! {
+                query = query.bind(&self.#ident);
+            });
+        }
     }
 
     let table_name = table_override.unwrap_or_else(|| name.to_string().to_lowercase());
@@ -85,6 +108,14 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
 
             fn columns() -> &'static [&'static str] {
                 &[#(#columns),*]
+            }
+
+            fn pkey_columns() -> &'static [&'static str] {
+                &[#(#pkeys),*]
+            }
+
+            fn data_columns() -> &'static [&'static str] {
+                &[#(#non_pkeys),*]
             }
 
             fn bind<'q>(
@@ -102,6 +133,38 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
                 #(#binds)*
                 query
             }
+
+            fn pkey_bind<'q>(
+                &'q self,
+                mut query: sqlx::query::Query<
+                    'q,
+                    sqlx::Postgres,
+                    sqlx::postgres::PgArguments,
+                >,
+            ) -> sqlx::query::Query<
+                'q,
+                sqlx::Postgres,
+                sqlx::postgres::PgArguments,
+            > {
+                #(#pkey_binds)*
+                query
+            }
+
+            fn data_bind<'q>(
+                &'q self,
+                mut query: sqlx::query::Query<
+                    'q,
+                    sqlx::Postgres,
+                    sqlx::postgres::PgArguments,
+                >,
+            ) -> sqlx::query::Query<
+                'q,
+                sqlx::Postgres,
+                sqlx::postgres::PgArguments,
+            > {
+                #(#data_binds)*
+                query
+            }
         }
 
         impl sqlext::ToRow<sqlx::Sqlite> for #name {
@@ -111,6 +174,14 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
 
             fn columns() -> &'static [&'static str] {
                 &[#(#columns),*]
+            }
+
+            fn pkey_columns() -> &'static [&'static str] {
+                &[#(#pkeys),*]
+            }
+
+            fn data_columns() -> &'static [&'static str] {
+                &[#(#non_pkeys),*]
             }
 
             fn bind<'q>(
@@ -126,6 +197,38 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
                 sqlx::sqlite::SqliteArguments<'q>,
             > {
                 #(#binds)*
+                query
+            }
+
+            fn pkey_bind<'q>(
+                &'q self,
+                mut query: sqlx::query::Query<
+                    'q,
+                    sqlx::Sqlite,
+                    sqlx::sqlite::SqliteArguments<'q>,
+                >,
+            ) -> sqlx::query::Query<
+                'q,
+                sqlx::Sqlite,
+                sqlx::sqlite::SqliteArguments<'q>,
+            > {
+                #(#pkey_binds)*
+                query
+            }
+
+            fn data_bind<'q>(
+                &'q self,
+                mut query: sqlx::query::Query<
+                    'q,
+                    sqlx::Sqlite,
+                    sqlx::sqlite::SqliteArguments<'q>,
+                >,
+            ) -> sqlx::query::Query<
+                'q,
+                sqlx::Sqlite,
+                sqlx::sqlite::SqliteArguments<'q>,
+            > {
+                #(#data_binds)*
                 query
             }
         }
