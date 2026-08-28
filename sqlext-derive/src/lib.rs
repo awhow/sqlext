@@ -43,7 +43,7 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
     let mut pkey_binds = Vec::new();
     let mut data_binds = Vec::new();
 
-    for field in fields.iter() {
+    for field in &fields {
         let ident = field.ident.as_ref().unwrap();
 
         let mut skip = false;
