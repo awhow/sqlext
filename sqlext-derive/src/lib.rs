@@ -1,19 +1,25 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Meta, parse_macro_input};
+use syn::Meta;
 
 #[proc_macro_derive(ToRow, attributes(sqlext))]
 pub fn derive_torow(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
+    match derive_torow_impl(input) {
+        Ok(tokens) => tokens.into(),
+        Err(err) => err.into_compile_error().into(),
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn derive_torow_impl(input: TokenStream) -> syn::Result<proc_macro2::TokenStream> {
+    let input = syn::parse::<syn::DeriveInput>(input)?;
 
     let name = input.ident;
 
     let mut table_override: Option<String> = None;
 
     for attr in input.attrs.iter().filter(|a| a.path().is_ident("sqlext")) {
-        let meta = attr.meta.clone();
-
-        if let Meta::List(list) = meta {
+        if let Meta::List(list) = &attr.meta {
             list.parse_nested_meta(|meta| {
                 if meta.path.is_ident("table") {
                     let value = meta.value()?.parse::<syn::LitStr>()?;
@@ -21,18 +27,27 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
                     return Ok(());
                 }
 
-                Ok(())
-            })
-            .unwrap();
+                Err(meta.error("unknown `sqlext` attribute"))
+            })?;
         }
     }
 
     let fields = match input.data {
         syn::Data::Struct(data) => match data.fields {
             syn::Fields::Named(fields) => fields.named,
-            _ => panic!("ToRow only supports named fields"),
+            _ => {
+                return Err(syn::Error::new_spanned(
+                    &name,
+                    "ToRow only supports structs with named fields",
+                ));
+            }
         },
-        _ => panic!("ToRow only supports structs"),
+        _ => {
+            return Err(syn::Error::new_spanned(
+                &name,
+                "ToRow only supports structs",
+            ));
+        }
     };
 
     let mut columns = Vec::new();
@@ -44,7 +59,10 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
     let mut data_binds = Vec::new();
 
     for field in &fields {
-        let ident = field.ident.as_ref().unwrap();
+        let ident = field
+            .ident
+            .as_ref()
+            .ok_or_else(|| syn::Error::new_spanned(field, "ToRow requires named fields"))?;
 
         let mut skip = false;
         let mut pkey = false;
@@ -69,9 +87,8 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
                         return Ok(());
                     }
 
-                    Ok(())
-                })
-                .unwrap();
+                    Err(meta.error("unknown `sqlext` attribute"))
+                })?;
             }
         }
 
@@ -234,5 +251,5 @@ pub fn derive_torow(input: TokenStream) -> TokenStream {
         }
     };
 
-    expanded.into()
+    Ok(expanded)
 }
