@@ -13,10 +13,10 @@ where
     /// `columns()` = `pkey_columns()` + `data_columns()`
     fn columns() -> &'static [&'static str];
 
-    /// SQL literal values for all columns.
-    ///
-    /// `values()` = `pkey_values()` + `data_values()`
-    fn values(&self) -> Vec<String>;
+    // /// SQL literal values for all columns.
+    // ///
+    // /// `values()` = `pkey_values()` + `data_values()`
+    // fn values(&self) -> Vec<String>;
 
     /// Query binding for all columns
     fn bind<'q>(
@@ -27,8 +27,8 @@ where
     /// List of primary key column names
     fn pkey_columns() -> &'static [&'static str];
 
-    /// SQL literal values for primary key columns
-    fn pkey_values(&self) -> Vec<String>;
+    // /// SQL literal values for primary key columns
+    // fn pkey_values(&self) -> Vec<String>;
 
     /// Query binding for only pkey columns
     fn pkey_bind<'q>(
@@ -39,8 +39,8 @@ where
     /// List of non-primary-key column names
     fn data_columns() -> &'static [&'static str];
 
-    /// SQL literal values for non-primary-key columns
-    fn data_values(&self) -> Vec<String>;
+    // /// SQL literal values for non-primary-key columns
+    // fn data_values(&self) -> Vec<String>;
 
     /// Query binding for only non-primary-key columns
     fn data_bind<'q>(
